@@ -23,7 +23,7 @@ char *lsh_read_line(void)
     while (1)
     {
         // Read a character
-        c = getChar();
+        c = getchar();
 
         // If we hit EOF, replace it with a null character and return.
         if (c == EOF || c == '\n')
@@ -162,7 +162,7 @@ int lsh_help(char **args)
     printf("Type program names and arguments, and hit enter.\n");
     printf("The following are built in:\n");
 
-    for (i = 0; i < lsh_num_builtins; i++)
+    for (i = 0; i < lsh_num_builtins(); i++)
     {
         printf(" %s\n", builtin_str[i]);
     }
@@ -174,6 +174,25 @@ int lsh_help(char **args)
 int lsh_exit(char **args)
 {
     return 0;
+}
+
+int lsh_execute(char **args)
+{
+    int i;
+
+    if (args[0] == NULL)
+    {
+        return 1;
+    }
+
+    for (i = 0; i < lsh_num_builtins(); i++)
+    {
+        if (strcmp(args[0], builtin_str[i]) == 0)
+        {
+            return (*builtin_func[i])(args);
+        }
+    }
+    return lsh_launch(args);
 }
 
 void lsh_loop(void)
@@ -199,7 +218,7 @@ int main(int argc, char **argv)
     // load config files, if any
 
     // run command loop
-    lsh__loop();
+    lsh_loop();
 
     // perform any shutdown/cleanup
     return EXIT_SUCCESS;
