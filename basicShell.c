@@ -20,13 +20,13 @@ char *lsh_read_line(void)
         exit(EXIT_FAILURE);
     }
 
-    while (1)
+    while (1) // loop will run till it returns or breaks
     {
         // Read a character
         c = getchar();
 
         // If we hit EOF, replace it with a null character and return.
-        if (c == EOF || c == '\n')
+        if (c == EOF || c == '\n') // EOF is -1 and '\n' is 10
         {
             buffer[position] = '\0';
             return buffer;
@@ -54,7 +54,7 @@ char *lsh_read_line(void)
 char **lsh_split_line(char *line)
 {
     int bufsize = LSH_TOK_BUFSIZE, position = 0;
-    char **tokens = malloc(bufsize * sizeof(char *));
+    char **tokens = malloc(bufsize * sizeof(char *)); // allocating memory blocks for array of string
     char *token;
 
     if (!tokens)
@@ -63,7 +63,7 @@ char **lsh_split_line(char *line)
         exit(EXIT_FAILURE);
     }
 
-    token = strtok(line, LSH_TOK_DELIM);
+    token = strtok(line, LSH_TOK_DELIM); // returns the first substring till it hits a delimter, replaces the delimiter with '\0' in memory
     while (token != NULL)
     {
         tokens[position] = token;
@@ -91,12 +91,15 @@ int lsh_launch(char **args)
     pid_t pid, wpid;
     int status;
 
-    pid = fork();
+    pid = fork(); // after fork(), a child process is created and both the processes follow instructions after this line
+    // fork() returns a positive value(pid) or -1(failure) to the parent
+    // fork() returns 0 to the child
     if (pid == 0)
     {
         // Child process
         if (execvp(args[0], args) == -1)
         {
+            // execvp() takes a program name and argument list, replaces the current process with that program, and never returns if successful. If it fails, it returns -1 and sets errno.
             perror("lsh");
         }
         exit(EXIT_FAILURE);
@@ -112,7 +115,9 @@ int lsh_launch(char **args)
         do
         {
             wpid = waitpid(pid, &status, WUNTRACED);
-        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+            // Hey shell, pause and wait until the child process whose PID is pid finishes or stops.
+            // Store its result in status
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status)); // keeps the shell waiting until the child process either exits normally or is terminated by a signal. Cause waitpid() may return multiple times for different child states,
     }
     return 1;
 }
@@ -158,7 +163,7 @@ int lsh_cd(char **args)
 int lsh_help(char **args)
 {
     int i;
-    printf("Stephen Brennan's LSH\n");
+    printf("KJ's LSH\n");
     printf("Type program names and arguments, and hit enter.\n");
     printf("The following are built in:\n");
 
@@ -195,10 +200,10 @@ int lsh_execute(char **args)
     return lsh_launch(args);
 }
 
-void lsh_loop(void)
+void lsh_loop(void) // (void) is important to not allow passing any arguments, blank might allow passing
 {
-    char *line;
-    char **args;
+    char *line;  // pointer to a char -> an array of char -> string
+    char **args; // pointer to a char* -> an array of (array of char) -> array of string
     int status;
 
     do
