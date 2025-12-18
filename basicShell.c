@@ -86,6 +86,17 @@ char **lsh_split_line(char *line)
     return tokens;
 }
 
+int lsh_num_args(char **args)
+{
+    int num = 0;
+    int i;
+    for (i = 0; args[i] != NULL; i++)
+    {
+        num++;
+    }
+    return num;
+}
+
 int lsh_launch(char **args)
 {
     pid_t pid, wpid;
@@ -126,17 +137,20 @@ int lsh_launch(char **args)
 int lsh_cd(char **args);
 int lsh_help(char **args);
 int lsh_exit(char **args);
+int lsh_say(char **args);
 
 // List of builtin commands followed by their corresponding functions
 char *builtin_str[] = {
     "cd",
     "help",
-    "exit"};
+    "exit",
+    "say"};
 
 int (*builtin_func[])(char **) = {
     &lsh_cd,
     &lsh_help,
-    &lsh_exit};
+    &lsh_exit,
+    &lsh_say};
 
 int lsh_num_builtins()
 {
@@ -179,6 +193,45 @@ int lsh_help(char **args)
 int lsh_exit(char **args)
 {
     return 0;
+}
+
+int lsh_say(char **args)
+{
+    if (args[1] == NULL)
+    {
+        fprintf(stderr, "lsh: expected argument to \"say\"");
+    }
+    else
+    {
+        int num = lsh_num_args(args);
+        size_t size = (num - 2) + 1;
+        int i;
+        for (i = 1; i < num; i++)
+        {
+            size += strlen(args[i]);
+        }
+        char *res = malloc(size);
+        if (!res)
+        {
+            perror("malloc");
+            return 1;
+        }
+        strcpy(res, args[1]);
+        i = 2;
+        while (args[i] != NULL)
+        {
+            strcat(res, " ");
+            strcat(res, args[i]);
+            i++;
+        }
+        if (write(STDOUT_FILENO, res, strlen(res)) == -1)
+        {
+            perror("lsh");
+        }
+        free(res);
+    }
+    printf("\n");
+    return 1;
 }
 
 int lsh_execute(char **args)
