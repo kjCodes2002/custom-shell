@@ -7,6 +7,10 @@
 #define LSH_TOK_BUFSIZE 64
 #define LSH_TOK_DELIM " \t\r\n\a"
 
+char **history = NULL;
+int historyPos = 0;
+int historyBuffSize = LSH_TOK_BUFSIZE;
+
 char *lsh_read_line(void)
 {
     int bufsize = LSH_RL_BUFSIZE;
@@ -83,6 +87,41 @@ char **lsh_split_line(char *line)
         token = strtok(NULL, LSH_TOK_DELIM);
     }
     tokens[position] = NULL;
+
+    if (tokens[0] != NULL)
+    {
+        if (history == NULL)
+        {
+            char **temp = realloc(history, historyBuffSize * sizeof(char *));
+            if (!temp)
+            {
+                perror("lsh");
+                return tokens;
+            }
+            else
+            {
+                history = temp;
+            }
+        }
+        char *linePtr = malloc(strlen(line) + 1);
+        strcpy(linePtr, line);
+        history[historyPos] = linePtr;
+        historyPos++;
+        if (historyPos >= historyBuffSize)
+        {
+            historyBuffSize += LSH_TOK_BUFSIZE;
+            char **temp = realloc(history, historyBuffSize * sizeof(char *));
+            if (!temp)
+            {
+                perror("lsh");
+            }
+            else
+            {
+                history = temp;
+            }
+        }
+    }
+
     return tokens;
 }
 
