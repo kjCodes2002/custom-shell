@@ -67,6 +67,9 @@ char **lsh_split_line(char *line)
         exit(EXIT_FAILURE);
     }
 
+    char *linePtr = malloc(strlen(line) + 1);
+    strcpy(linePtr, line);
+
     token = strtok(line, LSH_TOK_DELIM); // returns the first substring till it hits a delimter, replaces the delimiter with '\0' in memory
     while (token != NULL)
     {
@@ -103,8 +106,6 @@ char **lsh_split_line(char *line)
                 history = temp;
             }
         }
-        char *linePtr = malloc(strlen(line) + 1);
-        strcpy(linePtr, line);
         history[historyPos] = linePtr;
         historyPos++;
         if (historyPos >= historyBuffSize)
@@ -120,6 +121,7 @@ char **lsh_split_line(char *line)
                 history = temp;
             }
         }
+        history[historyPos] = NULL;
     }
 
     return tokens;
@@ -177,19 +179,22 @@ int lsh_cd(char **args);
 int lsh_help(char **args);
 int lsh_exit(char **args);
 int lsh_say(char **args);
+int lsh_history();
 
 // List of builtin commands followed by their corresponding functions
 char *builtin_str[] = {
     "cd",
     "help",
     "exit",
-    "say"};
+    "say",
+    "history"};
 
 int (*builtin_func[])(char **) = {
     &lsh_cd,
     &lsh_help,
     &lsh_exit,
-    &lsh_say};
+    &lsh_say,
+    &lsh_history};
 
 int lsh_num_builtins()
 {
@@ -270,6 +275,21 @@ int lsh_say(char **args)
         free(res);
     }
     printf("\n");
+    return 1;
+}
+
+int lsh_history()
+{
+    if (history == NULL)
+    {
+        return 1;
+    }
+    int i = 0;
+    while (history[i + 1] != NULL)
+    {
+        printf("%s\n", history[i]);
+        i++;
+    }
     return 1;
 }
 
