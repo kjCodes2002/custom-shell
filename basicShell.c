@@ -3,19 +3,36 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <termios.h>
 #define LSH_RL_BUFSIZE 1024
 #define LSH_TOK_BUFSIZE 64
 #define LSH_TOK_DELIM " \t\r\n\a"
-
+struct termios orig_termios;
 char **history = NULL;
 int historyPos = 0;
 int historyBuffSize = LSH_TOK_BUFSIZE;
+
+void disableRawMode()
+{
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
+void enableRawMode()
+{
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disableRawMode);
+
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
 
 char *lsh_read_line(void)
 {
     int bufsize = LSH_RL_BUFSIZE;
     int position = 0;
-    char *buffer = malloc(sizeof(char) * bufsize);
+    int historyIndex = -1;
+    char *buffer = malloc(bufsize);
     int c;
 
     if (!buffer)
@@ -24,24 +41,88 @@ char *lsh_read_line(void)
         exit(EXIT_FAILURE);
     }
 
-    while (1) // loop will run till it returns or breaks
+    while (1)
     {
-        // Read a character
         c = getchar();
 
-        // If we hit EOF, replace it with a null character and return.
-        if (c == EOF || c == '\n') // EOF is -1 and '\n' is 10
+        // ENTER
+        if (c == '\n')
+        {
+            putchar('\n');
+            buffer[position] = '\0';
+            return buffer;
+        }
+
+        // CTRL+D
+        if (c == 4)
         {
             buffer[position] = '\0';
             return buffer;
         }
-        else
-        {
-            buffer[position] = c;
-        }
-        position++;
 
-        // If we have exceeded the buffer, reallocate.
+        // BACKSPACE
+        if (c == 127)
+        {
+            if (position > 0)
+            {
+                position--;
+                buffer[position] = '\0';
+                printf("\b \b");
+            }
+            continue;
+        }
+
+        // ARROW KEYS
+        if (c == 27) // ESC
+        {
+            int c1 = getchar(); // [
+            int c2 = getchar(); // A/B
+
+            if (c1 == '[')
+            {
+                // UP arrow
+                if (c2 == 'A' && historyPos > 0)
+                {
+                    if (historyIndex == -1)
+                        historyIndex = historyPos - 1;
+                    else if (historyIndex > 0)
+                        historyIndex--;
+
+                    printf("\33[2K\r> ");
+                    strcpy(buffer, history[historyIndex]);
+                    position = strlen(buffer);
+                    printf("%s", buffer);
+                }
+
+                // DOWN arrow
+                else if (c2 == 'B')
+                {
+                    if (historyIndex != -1)
+                    {
+                        historyIndex++;
+                        if (historyIndex >= historyPos)
+                        {
+                            historyIndex = -1;
+                            buffer[0] = '\0';
+                            position = 0;
+                        }
+                        else
+                        {
+                            strcpy(buffer, history[historyIndex]);
+                            position = strlen(buffer);
+                        }
+
+                        printf("\33[2K\r> %s", buffer);
+                    }
+                }
+            }
+            continue;
+        }
+
+        // NORMAL CHARACTER
+        buffer[position++] = c;
+        putchar(c);
+
         if (position >= bufsize)
         {
             bufsize += LSH_RL_BUFSIZE;
@@ -332,11 +413,7 @@ void lsh_loop(void) // (void) is important to not allow passing any arguments, b
 
 int main(int argc, char **argv)
 {
-    // load config files, if any
-
-    // run command loop
+    enableRawMode();
     lsh_loop();
-
-    // perform any shutdown/cleanup
     return EXIT_SUCCESS;
 }
